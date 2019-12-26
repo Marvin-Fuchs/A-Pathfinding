@@ -3,17 +3,13 @@ import random
 import time
 
 class Grid:
-    def __init__(self,master,rows,cols,size,space,startX,startY,endX,endY):
+    def __init__(self,master,rows,cols,size,space):
         self.rows = rows
         self.cols = cols
         self.size = size
         self.space = space
         self.master = master
         #backEnd
-        self.startX = startX
-        self.startY = startY
-        self.endX = endX
-        self.endY = endY
         self.data = []
     def draw(self):
         for i in range(self.rows):
@@ -22,12 +18,9 @@ class Grid:
                 self.master.create_rectangle(j*self.size+self.space, i*self.size+self.space, j*self.size+self.size+self.space, i*self.size+self.size+self.space, fill="black", outline="white")
                 row.append(0)
             self.data.append(row)
-        self.data[self.startY][self.startX]='S'
-        self.data[self.endY][self.endX]='E'
     def markNode(self,row,col,color):
         self.master.create_rectangle(col*self.size+self.space, row*self.size+self.space, col*self.size+self.size+self.space, row*self.size+self.size+self.space, fill=color, outline="white")
     def event(self,event):
-        print(self.rows)
         row, col = (event.y-self.space)//self.size, (event.x-self.space)//self.size 
         if (0 <= row and row < self.rows and 0 <= col and col < self.cols):
             if not(row==self.startX and col==self.startY) and not(row==self.endX and col==self.endY):
@@ -36,20 +29,36 @@ class Grid:
     def printBoard(self):
         for row in self.data:
             print(row)
+    def setStart(self,event):
+        x, y = event.widget.winfo_pointerxy()
+        x = x - 5
+        y = y - 50
+        row, col = (y-self.space)//self.size, (x-self.space)//self.size
+        if (0 <= row and row < self.rows and 0 <= col and col < self.cols):
+            self.markNode(row,col,"green")
+            self.startY,self.startX=row,col
+    def setEnd(self,event):
+        x, y = event.widget.winfo_pointerxy()
+        x = x - 5
+        y = y - 50
+        row, col = (y-self.space)//self.size, (x-self.space)//self.size
+        if (0 <= row and row < self.rows and 0 <= col and col < self.cols):
+            self.markNode(row,col,"red")
+            self.endY,self.endX=row,col
 
 class Pathfinder(Grid):
-    def __init__(self,master,rows,cols,size,space,startX,startY,endX,endY):
-        Grid.__init__(self,master,rows,cols,size,space,startX,startY,endX,endY)
+    def __init__(self,master,rows,cols,size,space):
+        Grid.__init__(self,master,rows,cols,size,space)
         self.draw()
 
     def findPath(self):
         # # init of open and closed List
         self.openList = []
         self.closedList = []
-        self.startPos = (self.startX,self.startY)
-        self.endPos = (self.endX,self.endY)
+        self.startPos = (self.startY,self.startX)
+        self.endPos = (self.endY,self.endX)
         #start node is in self.openList with fCost=0
-        self.openList.append( {"nodePos":(self.startY,self.startX),"f":0,"g":0,"h":0,"parentPos":(0,9)} ) #node notation
+        self.openList.append( {"nodePos":(self.startY,self.startX),"f":0,"g":0,"h":0,"parentPos":None} ) #node notation
         #repeat until either
         # - self.openList is empty (len==0)
         # - currentNode is endNode
@@ -64,7 +73,7 @@ class Pathfinder(Grid):
             # print(currentNode)
             #did we reach the endNode?
             if currentNode["nodePos"]==self.endPos:
-                print("we made it")
+                print("We made IT\n")
                 self.regoPath(currentNode)
                 return True
             #we found the shortest possilbe path to the currentNode
@@ -158,13 +167,13 @@ class Pathfinder(Grid):
 
     def regoPath(self,currentNode):
         print("A*´s Suggestion:")
-        print(currentNode["nodePos"])
+        print(str(currentNode["nodePos"])+"  Endnote")
         self.markNode(currentNode["nodePos"][0],currentNode["nodePos"][1],"red")
-        while currentNode["parentPos"]!=self.startPos:
+        while currentNode["parentPos"]!=None:
             print(currentNode["parentPos"])
             self.markNode(currentNode["nodePos"][0],currentNode["nodePos"][1],"red")
             currentNode = self.findParentNode(currentNode["parentPos"])
-        print(self.startPos)
+        print(str(self.startPos)+"  StartNode")
         self.markNode(currentNode["nodePos"][0],currentNode["nodePos"][1],"red")
 
     def findParentNode(self,parentPos):
@@ -199,33 +208,27 @@ class Pathfinder(Grid):
         print()
 
 #defining rows and cols
-rows,cols=30,30
+rows,cols=20,20
 def main():
     setup=True
-    size=30
+    size=15
     space=3
-    width,height = 903,921
-    #StartNode
-    startY,startX = 2,20
-    #EndNode
-    endY,endX = 15,20
+    width,height = 303,321
     root = Tk()
     root.title('A*')
     canvas = Canvas(width=width, height=height)
     canvas.pack()
     #draw grid and create backend data
-    aS = Pathfinder(canvas,rows,cols,size,space,startX,startY,endX,endY)
-    #Start- und Endpunkt
-    aS.markNode(startX,startY,"orange")
-    aS.markNode(endX,endY,"red")
+    aS = Pathfinder(canvas,rows,cols,size,space)
     #setup of boundaries
     canvas.bind("<B1-Motion>", aS.event)
+    #setup of start and endnode
+    root.bind("<s>", aS.setStart)
+    root.bind("<e>", aS.setEnd)
     #A* Algorithm runs
     button = Button(canvas, text="run A*", command=aS.findPath).place(x=width/2-18,y=height-18)
-    
     #A* Algorithm
     root.mainloop()
 
 if __name__== "__main__":
   main()
-
